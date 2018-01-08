@@ -66,7 +66,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 pho::api::PPhoXi EvaluationScanner;
 pho::api::PhoXiFactory Factory;
-ros::Publisher pub_cloud, pub_normal_map, pub_confidence_map, pub_texture;
+ros::Publisher pub_cloud, pub_normal_map, pub_confidence_map, pub_texture, pub_depth_map;
 pho::api::PFrame CurrentFrame;
 
 void init_config(pho::api::PPhoXi &Scanner) {
@@ -248,7 +248,7 @@ void publish_frame(pho::api::PFrame MyFrame){
         //pcl::PLYWriter Writer;
         //Writer.writeBinary("Test Software PCL" + std::to_string(k) + " , " + std::to_string(i) + ".ply", MyPCLCloud2);
         pcl::PointCloud <pcl::PointXYZ> cloud;
-        sensor_msgs::Image texture, confidence_map, normal_map;
+        sensor_msgs::Image texture, confidence_map, normal_map, depth_map;
         ros::Time       timeNow         = ros::Time::now();
         std::string     frame           = "camera";
 
@@ -260,6 +260,9 @@ void publish_frame(pho::api::PFrame MyFrame){
 
         normal_map.header.stamp          = timeNow;
         normal_map.header.frame_id       = frame;
+
+        depth_map.header.stamp          = timeNow;
+        depth_map.header.frame_id       = frame;
 
         texture.encoding = "32FC1";
         sensor_msgs::fillImage( texture,
@@ -282,6 +285,13 @@ void publish_frame(pho::api::PFrame MyFrame){
                                 MyFrame->NormalMap.Size.Width, // width
                                 MyFrame->NormalMap.Size.Width * sizeof(float) * 3, // stepSize
                                 MyFrame->NormalMap.operator[](0));
+        depth_map.encoding = "32FC1";
+        sensor_msgs::fillImage( depth_map,
+                                sensor_msgs::image_encodings::TYPE_32FC1,
+                                MyFrame->DepthMap.Size.Height, // height
+                                MyFrame->DepthMap.Size.Width, // width
+                                MyFrame->DepthMap.Size.Width * sizeof(float), // stepSize
+                                MyFrame->DepthMap.operator[](0));
         int h = MyFrame->PointCloud.Size.Height;
         int w = MyFrame->PointCloud.Size.Width;
         for (int i = 0; i < h; ++i) {
@@ -299,6 +309,7 @@ void publish_frame(pho::api::PFrame MyFrame){
         pub_normal_map.publish(normal_map);
         pub_confidence_map.publish(confidence_map);
         pub_texture.publish(texture);
+        pub_depth_map.publish(depth_map);
     }
 }
 
@@ -373,6 +384,7 @@ int main(int argc, char **argv) {
     pub_normal_map = nh.advertise < sensor_msgs::Image > ("normal_map", 1);
     pub_confidence_map = nh.advertise < sensor_msgs::Image > ("confidence_map", 1);
     pub_texture = nh.advertise < sensor_msgs::Image > ("texture", 1);
+    pub_depth_map = nh.advertise < sensor_msgs::Image > ("depth_map", 1);
 
     std::cout << "Ready!" << std::endl;
     ros::spin();
